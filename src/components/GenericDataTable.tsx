@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 // Type Definitions
 type SortMode = "asc" | "desc" | "original" | null;
 
-// Define a type for the class structure to reuse it
 type ClassProps = {
     theadClasses?: string
     tbodyClasses?: string
@@ -34,9 +33,6 @@ const sortJSONRows = (rows: any[], key: string, mode: SortMode) => {
         if (valA == null) return mode === "asc" ? -1 : 1;
         if (valB == null) return mode === "asc" ? 1 : -1;
         
-        // Use a more robust check for number sorting: 
-        // Only treat as number if the value is explicitly a number or a string that safely converts to a number 
-        // and is not the result of coercing a non-numeric string (which is already handled by localeCompare).
         const aNum = Number(valA);
         const bNum = Number(valB);
         if (typeof valA === 'number' && typeof valB === 'number' || (!isNaN(aNum) && !isNaN(bNum) && typeof valA !== 'string' && typeof valB !== 'string')) {
@@ -78,17 +74,9 @@ const GenericDataTable = ({
     const defaultRowOddClasses = "bg-gradient-to-r from-purple-50 via-pink-50 to-yellow-50 hover:from-purple-100 hover:via-pink-100 hover:to-yellow-100";
     const defaultRowEvenClasses = "bg-gradient-to-r from-blue-50 via-green-50 to-teal-50 hover:from-purple-100 hover:via-pink-100 hover:to-yellow-100";
 
-    /**
-     * Helper function to compute the final class name based on the required logic.
-     * On replace: replace the default/fallback classes.
-     * On extend: append to the default/fallback classes.
-     */
     const getClassName = (defaultClasses: string, replace?: string, extend?: string) => {
-        // 1. If replace is provided, use it exclusively
         if (replace) return replace;
-        // 2. If extend is provided, append it to defaultClasses
         if (extend) return `${defaultClasses} ${extend}`;
-        // 3. Otherwise, use the default classes
         return defaultClasses;
     };
 
@@ -117,7 +105,6 @@ const GenericDataTable = ({
             // Cycle: asc -> desc -> original -> asc
             newMode = sortMode === "asc" ? "desc" : sortMode === "desc" ? "original" : "asc";
         } else {
-            // New column: start with asc
             newMode = "asc";
         }
 
@@ -128,12 +115,11 @@ const GenericDataTable = ({
             setSortKey(key);
             setSortMode(newMode);
         }
-        setPage(1); // Reset to first page on sort change
+        setPage(1); 
     };
 
     const totalRows = sortedData.length;
     const rowsToDisplay = rowsPerPage;
-    // Ensure totalPages is at least 1 if there's data, or 1 if no data but for display purposes
     const totalPages = Math.ceil(totalRows / rowsToDisplay) || 1; 
     const startIndex = (page - 1) * rowsToDisplay;
     const paginatedRows = sortedData.slice(startIndex, startIndex + rowsToDisplay);
@@ -164,7 +150,6 @@ const GenericDataTable = ({
             {PaginationControls}
 
             <table className="min-w-full divide-y divide-gray-200 rounded-xl overflow-hidden shadow-lg">
-                {/* THEAD with Conditional Styling */}
                 <thead className={theadClass}>
                     <tr>
                         {headers.map((header, idx) => {
@@ -174,10 +159,8 @@ const GenericDataTable = ({
                             const headerContent = (
                                 <div className="flex items-center justify-between">
                                     <span className="truncate">{header}</span>
-                                    {/* Sorting Icons */}
                                     {isSortable && (
                                         <span className={`ml-2 transition duration-200 ${isSorted ? 'text-white' : 'text-gray-200 opacity-50'}`}>
-                                            {/* Show current sort icon if sorted, otherwise show a dimmed up chevron as indicator */}
                                             {isSorted 
                                                 ? (sortMode === "asc" ? <ChevronUp /> : <ChevronDown />) 
                                                 : <ChevronUp className="opacity-50" />}
@@ -187,7 +170,6 @@ const GenericDataTable = ({
                             );
 
                             return (
-                                // TH with Conditional Styling
                                 <th
                                     key={idx}
                                     className={thClass}
@@ -195,7 +177,6 @@ const GenericDataTable = ({
                                     {isSortable ? (
                                         <button
                                             onClick={() => handleSortClick(header)}
-                                            // Ensure button spans the full width of the TH for a good click target
                                             className="flex items-center w-full py-1 -ml-4 pl-4 transition hover:bg-black/10 rounded-lg cursor-pointer group"
                                         >
                                             {headerContent}
@@ -210,7 +191,6 @@ const GenericDataTable = ({
                 </thead>
                 <tbody className={tbodyClass}>
                     {paginatedRows.map((row: any, i: number) => {
-                        // Determine row class based on index and computed class variables
                         const rowClass =
                             startIndex + i % 2 === 0
                                 ? rowEvenClass
@@ -222,7 +202,6 @@ const GenericDataTable = ({
                                 className={`transition-colors duration-200 ${rowClass}`}
                             >
                                 {headers.map((header, j) => (
-                                    // TD with Conditional Styling
                                     <td key={j} className={tdClass}>
                                         {row[header] ?? '-'}
                                     </td>
