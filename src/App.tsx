@@ -12,7 +12,7 @@ const App = () => {
         <div className="overflow-x-auto mb-6">
           <GenericDataTable
             api={{ url: 'data.json' }}
-            sorting={false}
+            sorting={true}
             pagination={5}
             search={true}
             replaceClasses={{

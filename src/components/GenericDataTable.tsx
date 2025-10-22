@@ -100,6 +100,8 @@ const GenericDataTable = ({
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     // Fetch data from API
+    // --- Core Function for complete SSR Model
+    // - - - - - - - - - - - - - - -
     useEffect(() => {
         let ignore = false;
         if (!api?.url) {
@@ -246,11 +248,6 @@ const GenericDataTable = ({
 
     return (
 <div className="p-4 bg-white rounded-xl shadow-2xl border border-gray-100">
-    
-    {/* -- UX IMPROVEMENT: Consolidated Toolbar Header --
-      This div contains search on the left (full width on small screens)
-      and potential future controls (like export/filters) on the right.
-    */}
     {(search || (pagination && totalPages > 1)) && (
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
             
