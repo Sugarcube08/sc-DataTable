@@ -33,7 +33,7 @@ type DataTableProps = {
     columns: Column[];
     payload?: Partial<Payload>;
     pagination?: number | null;
-    search?: number | boolean;
+    search?: number;
     extendsClasses?: ClassProps;
     replaceClasses?: ClassProps;
     initialData?: any;
@@ -126,85 +126,72 @@ const GenericDataTable = ({
         setError('');
 
         const skipAmount = (currentPage - 1) * rowsPerPage;
-        
+
         try {
             const baseUrl = api.url;
-            let url; // This will hold the final URL for the fetch call
+            let finalUrl;
             let fetchOptions: RequestInit = {};
 
             const sortParams = (currentSortKey && currentSortMode && currentSortMode !== 'original')
-                ? { sortBy: currentSortKey, order: currentSortMode } 
+                ? { sortBy: currentSortKey, order: currentSortMode }
                 : {};
-            
+
             const isSearching = currentSearch.trim() !== '';
 
-            // --- 1. Determine the correct API endpoint and parameters ---
-            const finalRequestParams: Record<string, string | number | boolean> = {
-                limit: rowsPerPage, 
-                skip: skipAmount,
-                ...sortParams, 
-            };
-
+            // --- 1. Determine the correct API endpoint ---
             if (isSearching) {
-                // If searching, the base URL must point to the search resource
-                // e.g., 'https://dummyjson.com/products/search'
-                url = baseUrl.endsWith('/products') 
-                    ? `${baseUrl}/search` 
-                    : `${baseUrl.split('/').slice(0, -1).join('/')}/search`; // Handles case where baseUrl might be something like '/products/1'
-                
-                // Add the search query parameter 'q'
-                finalRequestParams.q = currentSearch; 
+                finalUrl = baseUrl.replace(/\/$/, '') + '/search';
+
             } else {
-                // If not searching, use the original API URL
-                url = baseUrl;
+                finalUrl = baseUrl;
             }
 
-            // --- 2. Request Execution Logic ---
+            // --- 2. Build Query Parameters (Common to GET and POST bodies) ---
+            const finalRequestParams: Record<string, string | number | boolean> = {
+                limit: rowsPerPage,
+                skip: skipAmount,
+                ...sortParams,
+                // CRITICAL: ONLY add 'q' if searching, using the currentSearch value
+                ...(isSearching ? { q: currentSearch } : {}),
+            };
+
+
+            // --- 3. Request Execution Logic ---
             if (api.method === 'GET') {
-                const finalGetParams = { ...payload, ...finalRequestParams }; 
-                
+                const finalGetParams = { ...payload, ...finalRequestParams };
+
                 const params = new URLSearchParams(
                     Object.entries(finalGetParams)
                         .filter(([_, v]) => v != null)
                         .map(([k, v]) => [k, String(v)])
                 );
-                
-                // Append all parameters (pagination, sort, and q) to the chosen URL
-                url += `?${params.toString()}`;
+
+                finalUrl += `?${params.toString()}`;
                 fetchOptions = { method: 'GET' };
 
             } else {
-                // For POST, the search parameter 'q' must be in the body
+                // For POST, the finalUrl is already set above (to search or base)
                 const finalPayload: Payload = {
                     ...payload,
                     ...finalRequestParams,
                 } as Payload;
 
-                // For POST, the url is typically the base URL, but if the API
-                // uses a dedicated POST search endpoint, 'url' (which holds the search path) is used.
-                if (isSearching) {
-                    // Use the dedicated search URL calculated above for POST requests too
-                    url = url; 
-                } else {
-                    url = baseUrl;
-                }
-                
                 fetchOptions = {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(finalPayload),
                 };
             }
-            
-            console.log("Fetching URL:", url); // This should now correctly show the pagination parameters on both search and non-search calls
 
-            const res = await fetch(url, fetchOptions);
+            console.log("Fetching URL:", finalUrl);
+
+            const res = await fetch(finalUrl, fetchOptions); // Use finalUrl here
             if (!res.ok) throw new Error(`HTTP error ${res.status}`);
             const json = await res.json();
             const parsedData = parseApiResponse(columns, json);
-            setTotalItems(json.total || 0); 
-            setData(parsedData); 
-            
+            setTotalItems(json.total || 0);
+            setData(parsedData);
+
         } catch (err: any) {
             console.error('Server fetch error:', err);
             setError(err.message || 'Failed to fetch data');
@@ -218,14 +205,20 @@ const GenericDataTable = ({
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), search);
         return () => clearTimeout(handler);
     }, [searchTerm]);
-    useEffect(() => {
-        const isPageResetNeeded = page !== 1 && (debouncedSearch || sortKey || sortMode);
 
-        if (isPageResetNeeded) {
+    useEffect(() => {
+        if (initialData) return;
+        if (page !== 1) {
             setPage(1);
-        } else if (!initialData) {
+        } else {
             fetchData(page, debouncedSearch, sortKey, sortMode);
         }
+    }, [debouncedSearch, sortKey, sortMode, fetchData, initialData]);
+
+
+    useEffect(() => {
+        if (initialData) return;
+        fetchData(page, debouncedSearch, sortKey, sortMode);
     }, [page, debouncedSearch, sortKey, sortMode, fetchData, initialData]);
 
 
@@ -252,10 +245,8 @@ const GenericDataTable = ({
     const rowEvenClass = getClassName("bg-gradient-to-r from-blue-50 via-green-50 to-teal-50 hover:bg-teal-100/50", replaceClasses?.rowEvenClasses, extendsClasses?.rowEvenClasses);
     const searchInputClass = getClassName("w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition shadow-lg", replaceClasses?.searchInputClasses, extendsClasses?.searchInputClasses);
     const searchContainerClass = getClassName("w-full flex justify-center mb-6", replaceClasses?.searchContainerClasses, extendsClasses?.searchContainerClasses);
-
     const paginatedRows = data;
-
-    // --- Pagination Controls (No change)
+    
     const PaginationControls = () => (
         <div className="flex justify-center items-center gap-4 mt-4">
             <button
