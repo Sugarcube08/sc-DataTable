@@ -33,7 +33,7 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-            search={true}
+            search={1000}
           />
         </div>
 {/*         

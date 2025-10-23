@@ -33,7 +33,7 @@ type DataTableProps = {
     columns: Column[];
     payload?: Partial<Payload>;
     pagination?: number | null;
-    search?: boolean;
+    search?: number | boolean;
     extendsClasses?: ClassProps;
     replaceClasses?: ClassProps;
     initialData?: any;
@@ -94,7 +94,7 @@ const GenericDataTable = ({
     pagination,
     columns,
     payload,
-    search = true,
+    search = 1000,
     extendsClasses,
     replaceClasses,
     initialData,
@@ -189,26 +189,22 @@ const GenericDataTable = ({
         if (!initialData) fetchData();
     }, [fetchData, initialData]);
 
-    // --- Debounce search
     useEffect(() => {
-        const handler = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+        const handler = setTimeout(() => setDebouncedSearch(searchTerm), search);
         return () => clearTimeout(handler);
     }, [searchTerm]);
 
-    // Reset to page 1 on search/sort change
     useEffect(() => {
         if (page !== 1) setPage(1);
         else fetchData();
     }, [debouncedSearch, sortKey, sortMode]);
-    
-    // Fetch data when page changes (if not already triggered by reset)
+
     useEffect(() => {
         fetchData(); 
     }, [page, fetchData]);
 
 
     const handleSortClick = (key: string) => {
-        // 'key' is now the dataIndex path (e.g., 'title' or 'dimensions.width')
         let newMode: SortMode;
         if (sortKey === key) {
             newMode = sortMode === "asc" ? "desc" : sortMode === "desc" ? "original" : "asc";
@@ -222,8 +218,6 @@ const GenericDataTable = ({
             setSortMode(newMode);
         }
     };
-
-    // --- Classes (Same as original)
     const theadClass = getClassName("bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-400 text-white", replaceClasses?.theadClasses, extendsClasses?.theadClasses);
     const thClass = getClassName("px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide", replaceClasses?.thClasses, extendsClasses?.thClasses);
     const tbodyClass = getClassName("divide-y divide-gray-100 bg-white", replaceClasses?.tbodyClasses, extendsClasses?.tbodyClasses);
@@ -232,11 +226,7 @@ const GenericDataTable = ({
     const rowEvenClass = getClassName("bg-gradient-to-r from-blue-50 via-green-50 to-teal-50 hover:bg-teal-100/50", replaceClasses?.rowEvenClasses, extendsClasses?.rowEvenClasses);
     const searchInputClass = getClassName("w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition shadow-lg", replaceClasses?.searchInputClasses, extendsClasses?.searchInputClasses);
     const searchContainerClass = getClassName("w-full flex justify-center mb-6", replaceClasses?.searchContainerClasses, extendsClasses?.searchContainerClasses);
-
-    // The data for display is simply the data fetched from the API
     const paginatedRows = data; 
-    
-    // --- Pagination Controls (Add simple buttons for navigation)
     const PaginationControls = () => (
         <div className="flex justify-center items-center gap-4 mt-4">
             <button
@@ -302,7 +292,6 @@ const GenericDataTable = ({
                                     <th key={idx} className={thClass}>
                                         {isSortable ? (
                                             <button
-                                                // 🎯 CRITICAL FIX: Pass the dataIndex, not the title
                                                 onClick={() => handleSortClick(col.dataIndex)}
                                                 className="flex items-center justify-between w-full p-2 -my-2 -ml-4 pl-4 transition hover:bg-black/10 rounded-lg cursor-pointer"
                                             >
