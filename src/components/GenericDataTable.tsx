@@ -23,7 +23,7 @@ type DataTableProps = {
     replaceClasses?: ClassProps;
 };
 
-// Icons (No change)
+// Icons
 const ChevronUp = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m18 15-6-6-6 6" />
@@ -41,18 +41,15 @@ const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-// Sorting function (Reverted to a simpler, more robust number check)
+// Sorting function
 const sortJSONRows = (rows: any[], key: string, mode: SortMode) => {
-    if (mode === "original" || mode === null) return rows; // Safety check
+    if (mode === "original" || mode === null) return rows;
     return [...rows].sort((a, b) => {
         const valA = a[key], valB = b[key];
-
-        // Handle null/undefined values
         if (valA == null && valB == null) return 0;
         if (valA == null) return mode === "asc" ? 1 : -1;
         if (valB == null) return mode === "asc" ? -1 : 1;
 
-        // Robust number check (handles numeric strings)
         const aIsNum = !isNaN(Number(valA)) && !isNaN(parseFloat(String(valA)));
         const bIsNum = !isNaN(Number(valB)) && !isNaN(parseFloat(String(valB)));
 
@@ -62,7 +59,6 @@ const sortJSONRows = (rows: any[], key: string, mode: SortMode) => {
             return mode === "asc" ? aNum - bNum : bNum - aNum;
         }
 
-        // Default to string comparison (numerical-aware)
         const aStr = String(valA), bStr = String(valB);
         const comparison = aStr.localeCompare(bStr, undefined, { sensitivity: "base", numeric: true });
         return mode === "asc" ? comparison : -comparison;
@@ -87,7 +83,6 @@ const GenericDataTable = ({
 
     // State for fetch, data, error
     const [data, setData] = useState<any[]>([]);
-    // Added: Stores the original fetched data for the 'original' sort mode
     const [originalData, setOriginalData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -120,7 +115,7 @@ const GenericDataTable = ({
                 if (!Array.isArray(json)) throw new Error('API response is not an array');
                 if (!ignore) {
                     setData(json);
-                    setOriginalData(json); // Store original data
+                    setOriginalData(json);
                 }
             } catch (err: any) {
                 console.error('Server fetch error:', err);
@@ -134,7 +129,7 @@ const GenericDataTable = ({
         return () => { ignore = true; };
     }, [api.url]);
 
-    // Debounced search & Page reset (No change)
+    
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), 500);
         return () => clearTimeout(handler);
@@ -142,12 +137,11 @@ const GenericDataTable = ({
 
     useEffect(() => setPage(1), [debouncedSearch, sortKey, sortMode]);
 
-    // Default Styling & Class Application (Re-added)
+    // Default Styling & Class Application
     const defaultTheadClasses = "bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-400 text-white";
     const defaultThClasses = "px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide";
     const defaultTbodyClasses = "divide-y divide-gray-100 bg-white";
     const defaultTdClasses = "px-4 py-2 text-sm text-gray-800";
-    // Simplified hover for better striping visibility
     const defaultRowOddClasses = "bg-gradient-to-r from-purple-50 via-pink-50 to-yellow-50 hover:bg-yellow-100/50";
     const defaultRowEvenClasses = "bg-gradient-to-r from-blue-50 via-green-50 to-teal-50 hover:bg-teal-100/50";
     const defaultSearchInputClasses = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition shadow-lg";
@@ -162,11 +156,7 @@ const GenericDataTable = ({
     const rowEvenClass = getClassName(defaultRowEvenClasses, replaceClasses?.rowEvenClasses, extendsClasses?.rowEvenClasses);
     const searchInputClass = getClassName(defaultSearchInputClasses, replaceClasses?.searchInputClasses, extendsClasses?.searchInputClasses);
     const searchContainerClass = getClassName(defaultSearchContainerClasses, replaceClasses?.searchContainerClasses, extendsClasses?.searchContainerClasses);
-
-
-    // Memoized filtered & sorted data (Updated to use originalData)
     const filteredAndSortedData = useMemo(() => {
-        // Start with original data to ensure 'original' sort mode works
         let currentData = originalData;
 
         if (search && debouncedSearch) {
@@ -177,37 +167,27 @@ const GenericDataTable = ({
                 )
             );
         }
-        // Only sort if sorting is enabled, a key is set, and mode is asc/desc
         if (sorting && sortKey && (sortMode === "asc" || sortMode === "desc")) {
             currentData = sortJSONRows(currentData, sortKey, sortMode);
         }
         return currentData;
     }, [originalData, search, debouncedSearch, sorting, sortKey, sortMode]);
 
-    // Pagination (Fixed to use filteredAndSortedData)
     const rowsPerPage = (typeof pagination === 'number' && pagination > 0) ? pagination : filteredAndSortedData.length;
     const totalRows = filteredAndSortedData.length;
     const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
     const startIndex = (page - 1) * rowsPerPage;
     const paginatedRows = filteredAndSortedData.slice(startIndex, startIndex + rowsPerPage);
 
-
-    // Render early states
     if (loading) return <div className="py-10 text-center">Loading...</div>;
     if (error) return <div className="py-10 text-center text-red-600">{error}</div>;
-    // Use originalData for initial check
     if (!originalData || originalData.length === 0) return <div className="py-10 text-center text-gray-500">No data available</div>;
-
-    const headers = Object.keys(originalData[0]); // Use originalData to get headers reliably
-
-    // Sorting click (Fixed to cycle asc -> desc -> original (null))
+    const headers = Object.keys(originalData[0]);
     const handleSortClick = (key: string) => {
         let newMode: SortMode;
         if (sortKey === key) {
-            // Cycle: asc -> desc -> original (null)
             newMode = sortMode === "asc" ? "desc" : sortMode === "desc" ? "original" : "asc";
         } else {
-            // New key always starts with asc
             newMode = "asc";
         }
 
@@ -218,7 +198,6 @@ const GenericDataTable = ({
         }
     };
 
-    // Pagination Controls Component (Re-added informative summary)
     const PaginationControls = (
         <div className="flex justify-between items-center p-2 text-sm border-t border-gray-200 mt-4">
             <span className="text-gray-600">
@@ -329,13 +308,6 @@ const GenericDataTable = ({
             </tbody>
         </table>
     </div>
-
-    {/* -- UX IMPROVEMENT: Pagination Controls --
-      The controls are now rendered inside a dedicated component 
-      which should handle the 'Showing X of Y' text and the buttons.
-      The previous fixed version already introduced the `PaginationControls` component 
-      (which is not shown here, but assumed to exist).
-    */}
     {(pagination && totalPages > 1) && PaginationControls}
 </div>
     );

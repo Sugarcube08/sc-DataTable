@@ -1,6 +1,7 @@
 import GenericDataTable from './components/GenericDataTable';
 
 const App = () => {
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-6xl bg-white bg-opacity-80 backdrop-blur-md rounded-2xl shadow-2xl p-8">
@@ -11,14 +12,18 @@ const App = () => {
         {/* Table Examples */}
         <div className="overflow-x-auto mb-6">
           <GenericDataTable
+            api={{ url: 'https://jsonplaceholder.typicode.com/todos/' }}
+            sorting={true}
+            pagination={5}
+            search={true}
+          />
+        </div>
+        <div className="overflow-x-auto mb-6">
+          <GenericDataTable
             api={{ url: 'data.json' }}
             sorting={true}
             pagination={5}
             search={true}
-            replaceClasses={{
-              searchInputClasses: "w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-lg",
-              searchContainerClasses: "w-full flex justify-center mb-6"
-            }}
           />
         </div>
 {/* 
