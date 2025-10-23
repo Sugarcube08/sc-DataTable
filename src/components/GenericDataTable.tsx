@@ -6,8 +6,9 @@ type SortMode = "asc" | "desc" | "original" | null;
 type Column = {
     title: string;
     dataIndex: string;
-     dataSrc?: string;
+    dataSrc?: string;
     sort?: boolean;
+    render?: (value: any, row: any, rowIndex: number) => React.ReactNode;
 };
 
 type ClassProps = {
@@ -65,8 +66,8 @@ const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
     let dataSource: any[] = [];
     if (Array.isArray(apiResponse)) dataSource = apiResponse;
     else {
-        const  dataSrc = columns.find(c => c. dataSrc)?. dataSrc;
-        if ( dataSrc && Array.isArray(apiResponse[ dataSrc])) dataSource = apiResponse[ dataSrc];
+        const dataSrc = columns.find(c => c.dataSrc)?.dataSrc;
+        if (dataSrc && Array.isArray(apiResponse[dataSrc])) dataSource = apiResponse[dataSrc];
         else if (Array.isArray(apiResponse.products)) dataSource = apiResponse.products;
         else dataSource = [apiResponse];
     }
@@ -126,10 +127,12 @@ const GenericDataTable = ({
             }
 
             // fetching
-            console.log(url)
             const res = await fetch(url, options);
             if (!res.ok) throw new Error(`HTTP error ${res.status}`);
             const json = await res.json();
+
+            console.log(json)
+
             setData(parseApiResponse(columns, json));
             setTotalItems(json.total || 0);
         } catch (err: any) {
@@ -144,10 +147,10 @@ const GenericDataTable = ({
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), search);
         return () => clearTimeout(handler);
     }, [searchTerm]);
-    
+
     useEffect(() => {
         setPage(1);
-    },[debouncedSearch])
+    }, [debouncedSearch])
 
     useEffect(() => {
         if (!initialData) fetchData();
@@ -225,7 +228,15 @@ const GenericDataTable = ({
                             const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
                             return (
                                 <tr key={startIndex + i} className={`transition-colors duration-200 ${rowClass}`}>
-                                    {columns.map((col, j) => <td key={j} className={classes.td}>{row[col.title] ?? '-'}</td>)}
+                                    {columns.map((col, j) => {
+                                        const cellValue = row[col.title];
+                                        return (
+                                            <td key={j} className={classes.td}>
+                                                {col.render ? col.render(cellValue, row, startIndex + j) : cellValue ?? '-'}
+                                            </td>
+                                        );
+                                    })}
+
                                 </tr>
                             );
                         }) : (
