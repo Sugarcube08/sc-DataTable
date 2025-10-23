@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
-type SortMode = "asc" | "desc" | "original" | null;
+export type SortMode = "asc" | "desc" | "original" | null;
 
-type Column = {
+export type Column = {
     title: string;
     dataIndex: string;
     dataSrc?: string;
@@ -10,7 +10,7 @@ type Column = {
     render?: (value: any, row: any, rowIndex: number) => React.ReactNode;
 };
 
-type ClassProps = {
+export type ClassProps = {
     theadClasses?: string;
     tbodyClasses?: string;
     thClasses?: string;
@@ -21,9 +21,9 @@ type ClassProps = {
     searchContainerClasses?: string;
 };
 
-type Payload = { skip: number; limit: number };
+export type Payload = { skip: number; limit: number };
 
-type DataTableProps = {
+export type DataTableProps = {
     api: { url: string; method: "GET" | "POST" };
     columns: Column[];
     payload?: Partial<Payload>;
