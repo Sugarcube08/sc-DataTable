@@ -1,6 +1,25 @@
 import GenericDataTable from './components/GenericDataTable';
 
 const App = () => {
+  const columns = [
+    { title: 'Title', dataIndex: 'title', src: 'products', sort:true },
+    { title: 'Price', dataIndex: 'price', src: 'products' },
+    { title: 'Discount Percentage', dataIndex: 'discountPercentage', src: 'products' },
+    { title: 'SKU', dataIndex: 'sku', src: 'products' },
+    { title: 'Weight', dataIndex: 'weight', src: 'products' },
+    { title: 'Width', dataIndex: 'dimensions.width', src: 'products' },
+    { title: 'Height', dataIndex: 'dimensions.height', src: 'products' },
+    { title: 'Depth', dataIndex: 'dimensions.depth', src: 'products' },
+    { title: 'Created At', dataIndex: 'meta.createdAt', src: 'products' },
+    { title: 'Updated At', dataIndex: 'meta.updatedAt', src: 'products' },
+    { title: 'Barcode', dataIndex: 'meta.barcode', src: 'products' },
+    { title: 'QR Code', dataIndex: 'meta.qrCode', src: 'products' },
+  ];
+
+  const payload = {
+    limit: 5,
+    filters: null,
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex flex-col items-center py-10 px-4">
@@ -9,29 +28,20 @@ const App = () => {
           CSV Data Viewer
         </h1>
 
-        {/* Table Examples */}
         <div className="overflow-x-auto mb-6">
           <GenericDataTable
-            api={{ url: 'https://jsonplaceholder.typicode.com/todos/' }}
-            sorting={true}
-            pagination={5}
+            api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
+            payload={payload}
+            columns={columns}
             search={true}
           />
         </div>
-        <div className="overflow-x-auto mb-6">
-          <GenericDataTable
-            api={{ url: 'data.json' }}
-            sorting={true}
-            pagination={5}
-            search={true}
-          />
-        </div>
-{/* 
+{/*         
         <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
           <GenericDataTable
-            api={{ url: 'data.json', method: 'GET', mode: 'absolute' }}
-            sorting={true}
-            pagination={15}
+            api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
+            payload={payload}
+            columns={columns}
             search={true}
             replaceClasses={{
               theadClasses: "bg-gray-800 text-gray-200",
@@ -46,9 +56,9 @@ const App = () => {
 
         <div className="overflow-x-auto mb-6 bg-white p-4 rounded-lg shadow-lg">
           <GenericDataTable
-            api={{ url: 'data.json', method: 'GET', mode: 'absolute' }}
-            sorting={true}
-            pagination={10}
+            api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
+            payload={payload}
+            columns={columns}
             search={true}
             replaceClasses={{
               theadClasses: "bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 text-white shadow-md",
@@ -65,9 +75,9 @@ const App = () => {
 
         <div className="overflow-x-auto mb-6">
           <GenericDataTable
-            api={{ url: 'data.json', method: 'GET', mode: 'absolute' }}
-            sorting={true}
-            pagination={5}
+            api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
+            payload={payload}
+            columns={columns}
             search={true}
             replaceClasses={{
               theadClasses: "bg-green-600 text-white",
@@ -84,9 +94,9 @@ const App = () => {
 
         <div className="overflow-x-auto mb-6 border border-blue-200 rounded-md">
           <GenericDataTable
-            api={{ url: 'http://localhost:5173/data.json' }}
-            sorting={false}
-            pagination={20}
+            api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
+            payload={payload}
+            columns={columns}
             search={true}
             replaceClasses={{
               theadClasses: "bg-blue-50 text-blue-800 border-b border-blue-300",
