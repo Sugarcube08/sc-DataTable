@@ -2,13 +2,25 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 export type SortMode = "asc" | "desc" | "original" | null;
 
-export type Column = {
+export type SerialColumn = {
     title: string;
+    serial: boolean;
+    dataSrc?: never;
+    sort?: never;
+    dataIndex?: never;
+    render?: (value: any, row: any, rowIndex: number) => React.ReactNode;
+};
+
+export type DataColumn = {
+    title: string;
+    serial?: never;
     dataIndex: string;
     dataSrc?: string;
     sort?: boolean;
     render?: (value: any, row: any, rowIndex: number) => React.ReactNode;
 };
+
+export type Column = SerialColumn | DataColumn;
 
 export type ClassProps = {
     theadClasses?: string;
@@ -55,9 +67,10 @@ const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-// Helpers
-const getNestedValue = (obj: any, path: string): any =>
-    path.split('.').reduce((acc, key) => acc?.[key], obj);
+const getNestedValue = (obj: any, path?: string): any => {
+    if (!path) return undefined;
+    return path.split('.').reduce((acc, key) => acc?.[key], obj);
+};
 
 const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
     let dataSource: any[] = [];
@@ -69,8 +82,14 @@ const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
         else dataSource = [apiResponse];
     }
     return dataSource.map(item =>
-        Object.fromEntries(columns.map(col => [col.title, getNestedValue(item, col.dataIndex)]))
+        Object.fromEntries(
+            columns.map(col => [
+                col.title,
+                col.serial ? null : getNestedValue(item, col.dataIndex),
+            ])
+        )
     );
+
 };
 
 const getClassName = (defaults: string, replace?: string, extend?: string) =>
@@ -207,7 +226,6 @@ const GenericDataTable = ({
         </div>
     );
 
-    if (loading) return <div className="py-10 text-center text-gray-500">Loading...</div>;
     if (error) return <div className="py-10 text-center text-red-600">{error}</div>;
 
     return (
@@ -242,26 +260,31 @@ const GenericDataTable = ({
                     {rowsPerPage < totalItems && <PaginationControls />}
                 </div>
             )}
-
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
-                <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto border border-gray-200 rounded-xl min-h-[400px]">
+                <table className="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead className={classes.thead}>
                         <tr>
-                            <th key="serial-header" className={classes.th} style={{ width: '50px' }}> 
-                                <span>S. No.</span>
-                            </th>
                             {columns.map((col, idx) => {
+                                // ✅ Handle serial column
+                                if (col.serial) {
+                                    return (
+                                        <th key={`serial-${idx}`} className={classes.th} style={{ width: '60px' }}>
+                                            <span>{col.title}</span>
+                                        </th>
+                                    );
+                                }
+
+                                // ✅ Normal data columns
                                 const isSorted = sortKey === col.dataIndex;
                                 const sortIcon = isSorted
-                                    ? sortMode === "asc"
-                                        ? <ChevronUp />
-                                        : <ChevronDown />
+                                    ? sortMode === "asc" ? <ChevronUp /> : <ChevronDown />
                                     : <ChevronUp className="opacity-40" />;
+
                                 return (
                                     <th key={idx} className={classes.th}>
-                                        {col.sort ? (
+                                        {col.sort && col.dataIndex ? (
                                             <button
-                                                onClick={() => handleSortClick(col.dataIndex)}
+                                                onClick={() => handleSortClick(col.dataIndex!)}
                                                 className="flex items-center justify-between w-full px-2 py-1 rounded-md hover:bg-black/10 transition"
                                             >
                                                 <span>{col.title}</span>
@@ -276,37 +299,53 @@ const GenericDataTable = ({
                         </tr>
                     </thead>
                     <tbody className={classes.tbody}>
-                        {data.length > 0 ? data.map((row, i) => {
+                        {loading ? (
+                            // 🔸 Loading skeleton rows
+                            Array.from({ length: payload?.limit || 5 }).map((_, i) => (
+                                <tr key={`loading-${i}`} className={classes.rowEven}>
+                                    {columns.map((_, j) => (
+                                        <td key={`loading-td-${j}`} className={`${classes.td} animate-pulse`}>
+                                            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto" />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))
+                        ) : data.length > 0 ? data.map((row, i) => {
                             const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
-                            // Calculate the serial number for the current row
                             const serialNumber = startIndex + i + 1;
 
                             return (
                                 <tr key={startIndex + i} className={rowClass}>
+                                    {columns.map((col, j) => {
+                                        // ✅ Serial column
+                                        if (col.serial) {
+                                            const value = serialNumber;
+                                            return (
+                                                <td key={`serial-${j}`} className={classes.td}>
+                                                    {col.render ? col.render(value, row, serialNumber - 1) : value}
+                                                </td>
+                                            );
+                                        }
 
-                                    {/* 👇 ADD THE SERIAL NUMBER CELL HERE */}
-                                    <td key="serial-number" className={classes.td}>
-                                        {serialNumber}
-                                    </td>
-                                    {/* 👆 END SERIAL NUMBER CELL */}
-
-                                    {columns.map((col, j) => (
-                                        // serialized rows 
-                                        <td key={j} className={classes.td}>
-                                            {col.render ? col.render(row[col.title], row, startIndex + j) : row[col.title] ?? "-"}
-                                        </td>
-                                    ))}
+                                        // ✅ Normal data column
+                                        const value = col.dataIndex ? row[col.title] ?? "-" : "-";
+                                        return (
+                                            <td key={j} className={classes.td}>
+                                                {col.render ? col.render(value, row, startIndex + j) : value}
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             );
                         }) : (
                             <tr>
-                                {/* NOTE: You'll need to update colSpan to columns.length + 1 */}
-                                <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500 font-medium">
+                                <td colSpan={columns.length} className="text-center py-8 text-gray-500 font-medium">
                                     No data available. {debouncedSearch && `(No results for "${debouncedSearch}")`}
                                 </td>
                             </tr>
                         )}
                     </tbody>
+
                 </table>
             </div>
         </div>
