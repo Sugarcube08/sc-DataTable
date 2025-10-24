@@ -2,9 +2,9 @@ import GenericDataTable from './components/GenericDataTable';
 
 const App = () => {
   const columns = [
-
+    { title: 'Serial', serial: true, render: (value: string | number | boolean) => <span className="font-bold text-lg">{value}</span> },
     { title: 'Title', dataIndex: 'title', dataSrc: 'products', sort: true },
-    { title: 'Price', dataIndex: 'price', dataSrc: 'products',render: (value:any) => <a href='https://github.com/Sugarcube08/sc-DataTable' className="text-green-600 bg-blue-200 p-2 rounded-full border-2 font-bold">${value}</a> , sort: true},
+    { title: 'Price', dataIndex: 'price', dataSrc: 'products', render: (value: string | number | boolean) => <a href='https://github.com/Sugarcube08/sc-DataTable' className="text-green-600 bg-blue-200 p-2 rounded-full border-2 font-bold">${value}</a>, sort: true },
     { title: 'Discount Percentage', dataIndex: 'discountPercentage', dataSrc: 'products' },
     { title: 'SKU', dataIndex: 'sku', dataSrc: 'products' },
     { title: 'Weight', dataIndex: 'weight', dataSrc: 'products' },
@@ -33,15 +33,14 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-            searchDebounce={1000}
           />
         </div>
-    <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
+        <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
           <GenericDataTable
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-             searchDebounce={1000}
+            searchDebounce={1000}
             replaceClasses={{
               theadClasses: "bg-gray-800 text-gray-200",
               thClasses: "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-700",
@@ -58,7 +57,7 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-             searchDebounce={1000}
+            searchDebounce={1000}
             replaceClasses={{
               theadClasses: "bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 text-white shadow-md",
               thClasses: "px-6 py-3 text-center text-sm font-bold uppercase",
@@ -77,7 +76,7 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-             searchDebounce={1000}
+            searchDebounce={1000}
             replaceClasses={{
               theadClasses: "bg-green-600 text-white",
               thClasses: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider shadow-inner",
@@ -96,7 +95,7 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-             searchDebounce={1000}
+            searchDebounce={1000}
             replaceClasses={{
               theadClasses: "bg-blue-50 text-blue-800 border-b border-blue-300",
               thClasses: "px-4 py-2 text-center text-xs font-semibold uppercase border-r border-blue-200",
