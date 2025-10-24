@@ -234,7 +234,7 @@ const GenericDataTable = ({
                         onChange={e => setRowsPerPage(Number(e.target.value))}
                         className="w-full md:w-28 bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-2 text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                     >
-                        {[payload?.limit ?? 10, 25, 50, 100].map(rpp => (
+                        {[payload?.limit, 10, 25, 50, 100].map(rpp => (
                             <option key={rpp} value={rpp}>{rpp}</option>
                         ))}
                     </select>
@@ -247,6 +247,9 @@ const GenericDataTable = ({
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className={classes.thead}>
                         <tr>
+                            <th key="serial-header" className={classes.th} style={{ width: '50px' }}> 
+                                <span>S. No.</span>
+                            </th>
                             {columns.map((col, idx) => {
                                 const isSorted = sortKey === col.dataIndex;
                                 const sortIcon = isSorted
@@ -272,13 +275,23 @@ const GenericDataTable = ({
                             })}
                         </tr>
                     </thead>
-
                     <tbody className={classes.tbody}>
                         {data.length > 0 ? data.map((row, i) => {
                             const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
+                            // Calculate the serial number for the current row
+                            const serialNumber = startIndex + i + 1;
+
                             return (
                                 <tr key={startIndex + i} className={rowClass}>
+
+                                    {/* 👇 ADD THE SERIAL NUMBER CELL HERE */}
+                                    <td key="serial-number" className={classes.td}>
+                                        {serialNumber}
+                                    </td>
+                                    {/* 👆 END SERIAL NUMBER CELL */}
+
                                     {columns.map((col, j) => (
+                                        // serialized rows 
                                         <td key={j} className={classes.td}>
                                             {col.render ? col.render(row[col.title], row, startIndex + j) : row[col.title] ?? "-"}
                                         </td>
@@ -287,7 +300,8 @@ const GenericDataTable = ({
                             );
                         }) : (
                             <tr>
-                                <td colSpan={columns.length} className="text-center py-8 text-gray-500 font-medium">
+                                {/* NOTE: You'll need to update colSpan to columns.length + 1 */}
+                                <td colSpan={columns.length + 1} className="text-center py-8 text-gray-500 font-medium">
                                     No data available. {debouncedSearch && `(No results for "${debouncedSearch}")`}
                                 </td>
                             </tr>
