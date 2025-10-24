@@ -33,7 +33,6 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
-            searchDebounce={1000}
           />
         </div>
         <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">

@@ -100,7 +100,7 @@ const GenericDataTable = ({
     pagination,
     columns,
     payload,
-    searchDebounce = 500,
+    searchDebounce = false,
     extendsClasses,
     replaceClasses,
     initialData,
@@ -172,7 +172,7 @@ const GenericDataTable = ({
         return () => clearTimeout(handler);
     }, [searchTerm, searchDebounce]);
 
-    useEffect(() => { setPage(1); }, [debouncedSearch]);
+    useEffect(() => { setPage(1); }, [debouncedSearch, rowsPerPage]);
     useEffect(() => { if (!initialData) fetchData(); }, [fetchData, initialData]);
 
     const handleSortClick = (key: string) => {
