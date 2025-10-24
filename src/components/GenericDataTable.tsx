@@ -282,7 +282,6 @@ const GenericDataTable = ({
                     <thead className={classes.thead}>
                         <tr>
                             {columns.map((col, idx) => {
-                                // ✅ Handle serial column
                                 if (col.serial) {
                                     return (
                                         <th key={`serial-${idx}`} className={classes.th} style={{ width: '60px' }}>
@@ -290,8 +289,6 @@ const GenericDataTable = ({
                                         </th>
                                     );
                                 }
-
-                                // ✅ Normal data columns
                                 const isSorted = sortKey === col.dataIndex;
                                 const sortIcon = isSorted
                                     ? sortMode === "asc" ? <ChevronUp /> : <ChevronDown />
@@ -317,7 +314,6 @@ const GenericDataTable = ({
                     </thead>
                     <tbody className={classes.tbody}>
                         {loading ? (
-                            // 🔸 Loading skeleton rows
                             Array.from({ length: payload?.limit || 5 }).map((_, i) => (
                                 <tr key={`loading-${i}`} className={classes.rowEven}>
                                     {columns.map((_, j) => (
@@ -334,7 +330,6 @@ const GenericDataTable = ({
                             return (
                                 <tr key={startIndex + i} className={rowClass}>
                                     {columns.map((col, j) => {
-                                        // ✅ Serial column
                                         if (col.serial) {
                                             const value = serialNumber;
                                             return (
@@ -344,7 +339,6 @@ const GenericDataTable = ({
                                             );
                                         }
 
-                                        // ✅ Normal data column
                                         const value = col.dataIndex ? row[col.title] ?? "-" : "-";
                                         return (
                                             <td key={j} className={classes.td}>
