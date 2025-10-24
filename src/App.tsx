@@ -3,18 +3,18 @@ import GenericDataTable from './components/GenericDataTable';
 const App = () => {
   const columns = [
     { title: 'Serial', serial: true, render: (value: string | number | boolean) => <span className="font-bold text-lg">{value}</span> },
-    { title: 'Title', dataIndex: 'title', dataSrc: 'products', sort: true },
-    { title: 'Price', dataIndex: 'price', dataSrc: 'products', render: (value: string | number | boolean) => <a href='https://github.com/Sugarcube08/sc-DataTable' className="text-green-600 bg-blue-200 p-2 rounded-full border-2 font-bold">${value}</a>, sort: true },
-    { title: 'Discount Percentage', dataIndex: 'discountPercentage', dataSrc: 'products' },
-    { title: 'SKU', dataIndex: 'sku', dataSrc: 'products' },
-    { title: 'Weight', dataIndex: 'weight', dataSrc: 'products' },
-    { title: 'Width', dataIndex: 'dimensions.width', dataSrc: 'products' },
-    { title: 'Height', dataIndex: 'dimensions.height', dataSrc: 'products' },
-    { title: 'Depth', dataIndex: 'dimensions.depth', dataSrc: 'products' },
-    { title: 'Created At', dataIndex: 'meta.createdAt', dataSrc: 'products' },
-    { title: 'Updated At', dataIndex: 'meta.updatedAt', dataSrc: 'products' },
-    { title: 'Barcode', dataIndex: 'meta.barcode', dataSrc: 'products' },
-    { title: 'QR Code', dataIndex: 'meta.qrCode', dataSrc: 'products' },
+    { title: 'Title', dataIndex: 'title', sort: true },
+    { title: 'Price', dataIndex: 'price', render: (value: string | number | boolean) => <a href='https://github.com/Sugarcube08/sc-DataTable' className="text-green-600 bg-blue-200 p-2 rounded-full border-2 font-bold">${value}</a>, sort: true },
+    { title: 'Discount Percentage', dataIndex: 'discountPercentage' },
+    { title: 'SKU', dataIndex: 'sku' },
+    { title: 'Weight', dataIndex: 'weight' },
+    { title: 'Width', dataIndex: 'dimensions.width' },
+    { title: 'Height', dataIndex: 'dimensions.height' },
+    { title: 'Depth', dataIndex: 'dimensions.depth' },
+    { title: 'Created At', dataIndex: 'meta.createdAt' },
+    { title: 'Updated At', dataIndex: 'meta.updatedAt' },
+    { title: 'Barcode', dataIndex: 'meta.barcode' },
+    { title: 'QR Code', dataIndex: 'meta.qrCode' },
   ];
 
   const payload = {
@@ -33,6 +33,7 @@ const App = () => {
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
             payload={payload}
             columns={columns}
+            searchDebounce={1000} 
           />
         </div>
         <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
