@@ -74,22 +74,40 @@ const getNestedValue = (obj: any, path?: string): any => {
 
 const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
     let dataSource: any[] = [];
-    if (Array.isArray(apiResponse)) dataSource = apiResponse;
-    else {
-        const dataSrc = columns.find(c => c.dataSrc)?.dataSrc;
-        if (dataSrc && Array.isArray(apiResponse[dataSrc])) dataSource = apiResponse[dataSrc];
-        else if (Array.isArray(apiResponse.products)) dataSource = apiResponse.products;
-        else dataSource = [apiResponse];
+
+    if (Array.isArray(apiResponse)) {
+        dataSource = apiResponse;
+    } else {
+        const colWithDataSrc = columns.find(c => 'dataSrc' in c && c.dataSrc !== undefined);
+        let dataSrc = colWithDataSrc?.dataSrc;
+
+        if (dataSrc === "") {
+            const arrayKeys = Object.keys(apiResponse).filter(k => Array.isArray(apiResponse[k]));
+            if (arrayKeys.length === 0) {
+                throw new Error(`No array found in API response for empty dataSrc.`);
+            } else if (arrayKeys.length > 1) {
+                throw new Error(`Multiple array keys found in API response: ${arrayKeys.join(", ")}. Please specify dataSrc.`);
+            }
+            dataSrc = arrayKeys[0];
+        }
+
+        if (dataSrc && Array.isArray(apiResponse[dataSrc])) {
+            dataSource = apiResponse[dataSrc];
+        } else if (Array.isArray(apiResponse.products)) {
+            dataSource = apiResponse.products;
+        } else {
+            dataSource = [apiResponse];
+        }
     }
+
     return dataSource.map(item =>
         Object.fromEntries(
             columns.map(col => [
                 col.title,
-                col.serial ? null : getNestedValue(item, col.dataIndex),
+                col.serial ? null : getNestedValue(item, (col as DataColumn).dataIndex),
             ])
         )
     );
-
 };
 
 const getClassName = (defaults: string, replace?: string, extend?: string) =>
@@ -116,7 +134,6 @@ const GenericDataTable = ({
     const [sortMode, setSortMode] = useState<SortMode>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-
     const [rowsPerPage, setRowsPerPage] = useState(payload?.limit ?? pagination ?? 10);
     const totalPages = Math.max(Math.ceil(totalItems / rowsPerPage), 1);
     const startIndex = (page - 1) * rowsPerPage;
