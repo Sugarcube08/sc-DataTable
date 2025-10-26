@@ -790,4 +790,5 @@ Follow for more React components and web development content:
 - **📚 Well Documented**: Comprehensive documentation with examples
 - **🔒 Reliable**: Comprehensive error handling and edge case management
 
+
 > **GenericDataTable** – The data table component that adapts to your needs, not the other way around.
