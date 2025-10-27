@@ -4,7 +4,6 @@ import type { Api, Payload } from "../components/GenericDataTable";
 
 const V6 = () => {
     const columns = [
-        { title: 'Serial', serial: true },
         { title: 'User Name', dataIndex: 'username' },
         { title: 'Name', dataIndex: 'name' },
         { title: 'Email', dataIndex: 'email' },
@@ -14,12 +13,6 @@ const V6 = () => {
     const api: Api = {
         url: 'http://localhost:3000/api/datatable/v1',
         method: 'GET',
-        limit: "pagination.limit",
-        skip: "pagination.skip",
-        total: "pagination.totalItems",
-        sortBy: "sortBy",
-        sortOrder: "sortOrder",
-        searchPram: 'search'
     }
 
     const payload: Payload = {

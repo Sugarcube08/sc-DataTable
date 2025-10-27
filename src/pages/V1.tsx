@@ -1,37 +1,53 @@
 import GenericDataTable from "../components/GenericDataTable"
 import Theme from "../components/Theme";
-import type { Api } from "../components/GenericDataTable";
+import type { Api, Column } from "../components/GenericDataTable";
+import { useState, useEffect } from "react";
+import { useResponseStruct } from "../context/ResponseStructContext.tsx";
 
 const V1 = () => {
-  const columns = [
-    { title: 'Serial', serial: true},
+  const [payload, setPayload] = useState();
+
+  const { setResponseStruct } = useResponseStruct();
+
+  const columns: Column[] = [
     { title: 'User Name', dataIndex: 'username', sort: true },
     { title: 'Name', dataIndex: 'name', sort: true },
     { title: 'Email', dataIndex: 'email', sort: true },
     { title: 'Age', dataIndex: 'age', sort: true },
   ];
-  
+
   const api: Api = {
     url: 'http://localhost:3000/api/datatable/v1',
     method: 'GET',
-    limit : "pagination.limit",
-    skip : "pagination.skip",
-    total : "pagination.totalItems",
-    sortBy : "sortBy",
-    sortOrder : "sortOrder",
-    searchPram: 'search'
+    data: payload,
+    headers: {
+      'Content-Type': 'application/json',
+    }
   }
+
+  useEffect(() => {
+    setResponseStruct({
+      dataSrc: 'data',
+      limit: "pagination.limit",
+      skip: "pagination.skip",
+      total: "pagination.totalItems",
+      sortBy: "sortBy",
+      sortOrder: "sortOrder",
+      searchParam: 'search'
+    });
+  }, [setResponseStruct]);
 
   return (
     <Theme>
-        <div className="overflow-x-auto mb-6">
-          <GenericDataTable
-            api={api}
-            columns={columns}
-            searchDebounce={1000} 
-          />
-        </div>
-        <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
+      <div className="overflow-x-auto mb-6">
+        <GenericDataTable
+          api={api}
+          serial={true}
+          columns={columns}
+          searchDebounce={1000}
+        />
+      </div>
+      {/* <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
           <GenericDataTable
             api={api}
             columns={columns}
@@ -45,8 +61,8 @@ const V1 = () => {
               rowEvenClasses: "bg-gray-900/80 hover:bg-gray-700/80 transition duration-150",
             }}
           />
-        </div>
-{/* 
+        </div> */}
+      {/* 
         <div className="overflow-x-auto mb-6 bg-white p-4 rounded-lg shadow-lg">
           <GenericDataTable
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}

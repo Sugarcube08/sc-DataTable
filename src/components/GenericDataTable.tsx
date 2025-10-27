@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useResponseStruct } from '../context/ResponseStructContext';
 
 //  TYPES 
 export type SortMode = "asc" | "desc" | "original" | null;
@@ -21,6 +22,8 @@ export type DataColumn = {
     render?: (value: any, row: any, rowIndex: number) => React.ReactNode;
 };
 
+
+
 export type Column = SerialColumn | DataColumn;
 
 export type ClassProps = {
@@ -34,7 +37,15 @@ export type ClassProps = {
     searchContainerClasses?: string;
 };
 
-
+export type ResponseStruct = {
+    dataSrc?: string;
+    limit?: string;
+    skip?: string;
+    total?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    searchParam?: string;
+};
 
 export type Payload = {
     skip?: number;
@@ -45,18 +56,15 @@ export type Payload = {
 };
 
 export type Api = {
-    url: string; method: "GET" | "POST";
-    limit?: string;
-    skip?: string;
-    total?: string;
-    sortBy?: string;
-    sortOrder?: string;
-    searchRoute?: string;
-    searchPram?: string;
+    url: string;
+    method: "GET" | "POST";
+    data?: Payload;
+    headers?: Record<string, string>;
 };
 
 export type DataTableProps = {
     api: Api;
+    serial?: boolean;
     columns: Column[];
     payload?: Partial<Payload>;
     pagination?: number | null;
@@ -146,18 +154,18 @@ const PaginationControls = React.memo(({ page, totalPages, onPageChange }: {
 const GenericDataTable = ({
     api,
     pagination,
+    serial,
     columns,
-    payload,
     searchDebounce = false,
     extendsClasses,
     replaceClasses,
     initialData,
 }: DataTableProps) => {
-
-    const limitKey = api.limit || 'limit';
-    const skipKey = api.skip || 'skip';
-    const totalKey = api.total || 'total';
-
+    
+    const { responseStruct } = useResponseStruct();
+    const limitKey = responseStruct?.limit || 'limit';
+    const skipKey = responseStruct?.skip || 'skip';
+    const totalKey = responseStruct?.total || 'total';
     const [data, setData] = useState<any[]>(() =>
         initialData ? parseApiResponse(columns, initialData) : []
     );
@@ -165,75 +173,88 @@ const GenericDataTable = ({
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
     const [totalItems, setTotalItems] = useState(initialData?.[totalKey] || 0);
-    const [sortKey, setSortKey] = useState<string | null>(payload?.sortBy || null);
-    const [sortMode, setSortMode] = useState<SortMode>(payload?.sortOrder || null);
-    const [searchTerm, setSearchTerm] = useState(payload?.search ?? '');
-    const [debouncedSearch, setDebouncedSearch] = useState(payload?.search ?? '');
-    const [rowsPerPage, setRowsPerPage] = useState(payload?.limit ?? pagination ?? 10);
+    const [sortKey, setSortKey] = useState<string | null>(api?.data?.sortBy || null);
+    const [sortMode, setSortMode] = useState<SortMode>(api?.data?.sortOrder || null);
+    const [searchTerm, setSearchTerm] = useState(api?.data?.search ?? '');
+    const [debouncedSearch, setDebouncedSearch] = useState(api?.data?.search ?? '');
+    const [rowsPerPage, setRowsPerPage] = useState(api?.data?.limit ?? pagination ?? 10);
     const totalPages = useMemo(() => {
-        const effectiveTotal = Math.max((totalItems ?? 0) - (payload?.skip ?? 0), 0);
+        const effectiveTotal = Math.max((totalItems ?? 0) - (api?.data?.skip ?? 0), 0);
         return Math.max(Math.ceil(effectiveTotal / rowsPerPage), 1);
-    }, [totalItems, rowsPerPage, payload?.skip]);
-    const startIndex = useMemo(() => ((page - 1) * rowsPerPage), [page, rowsPerPage, payload?.skip]);
+    }, [totalItems, rowsPerPage, api?.data?.skip]);
+    const startIndex = useMemo(() => ((page - 1) * rowsPerPage), [page, rowsPerPage, api?.data?.skip]);
 
     //  FETCH DATA 
     const fetchData = useCallback(async () => {
         if (!api.url) return;
         setLoading(true);
         setError('');
-        const skipAmount = ((page - 1) * rowsPerPage) + (payload?.skip ?? 0);
+
+        const skipAmount = ((page - 1) * rowsPerPage) + (api?.data?.skip ?? 0);
 
         try {
             const urlBase = api.url.replace(/\/$/, '');
             const params: Record<string, any> = {
                 [limitKey.split('.').at(-1) as string]: rowsPerPage,
                 [skipKey.split('.').at(-1) as string]: skipAmount,
-                ...(sortKey && sortMode ? { [api.sortBy as string]: sortKey, [api.sortOrder as string]: sortMode } : {}),
+                ...(sortKey && sortMode
+                    ? {
+                        [responseStruct?.sortBy as string]: sortKey,
+                        [responseStruct?.sortOrder as string]: sortMode,
+                    }
+                    : {}),
             };
 
             let url = urlBase;
-            let options: RequestInit = { method: api.method };
+            let options: RequestInit = {
+                method: api.method,
+                headers: { ...(api.headers || {}) },
+            };
 
             if (debouncedSearch.trim()) {
-                if (api.searchRoute) {
-                    url += api.searchRoute;
+                if (responseStruct?.searchRoute) {
+                    url += responseStruct?.searchRoute;
                 }
-                if (api.searchPram) {
-                    params[api.searchPram] = debouncedSearch;
+                if (responseStruct?.searchParam) {
+                    params[responseStruct?.searchParam] = debouncedSearch;
                 }
             }
 
-            if (api.method === 'GET') {
+            if (api.method === "GET") {
                 const query = new URLSearchParams(
-                    Object.entries({ ...payload, ...params })
+                    Object.entries({ ...api?.data, ...params })
                         .reduce<Record<string, string>>((acc, [key, value]) => {
-                            if (value !== undefined && value !== null) acc[key] = String(value);
+                            if (value !== undefined && value !== null)
+                                acc[key] = String(value);
                             return acc;
                         }, {})
                 ).toString();
+
                 url += `?${query}`;
             } else {
                 options = {
                     ...options,
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ...payload, ...params }),
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(api.headers || {}),
+                    },
+                    body: JSON.stringify({ ...api?.data, ...params }),
                 };
             }
 
-            console.log(url)
             const res = await fetch(url, options);
             if (!res.ok) throw new Error(`HTTP error ${res.status}`);
             const json = await res.json();
 
-
             setData(parseApiResponse(columns, json));
             setTotalItems(getNestedValue(json, totalKey) || 0);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch data');
+            setError(err.message || "Failed to fetch data");
         } finally {
             setLoading(false);
         }
-    }, [api, columns, page, rowsPerPage, sortKey, sortMode, debouncedSearch, payload, limitKey, skipKey, totalKey]);
+    }, [api, columns, page, rowsPerPage, sortKey, sortMode, debouncedSearch, api?.data, limitKey, skipKey, totalKey,]);
+
 
     //  EFFECTS 
     useEffect(() => {
@@ -297,7 +318,7 @@ const GenericDataTable = ({
                         onChange={e => setRowsPerPage(Number(e.target.value))}
                         className="w-full md:w-28 bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-2 text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                     >
-                        {[payload?.limit, 10, 25, 50, 100].filter(Boolean).map(rpp => (
+                        {[api?.data?.limit, 10, 25, 50, 100].filter(Boolean).map(rpp => (
                             <option key={rpp} value={rpp}>{rpp}</option>
                         ))}
                     </select>
@@ -316,16 +337,20 @@ const GenericDataTable = ({
                 <table className="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead className={classes.thead}>
                         <tr>
-                            {columns.map((col, idx) => {
-                                if (col.serial) {
-                                    return (
-                                        <th key={idx} className={classes.th} style={{ width: '60px' }}>{col.title}</th>
-                                    );
-                                }
+                            {/* Serial column outside columns map */}
+                            {serial && (
+                                <th className={classes.th} style={{ width: "60px" }}>
+                                    #
+                                </th>
+                            )}
 
+                            {/* Dynamic columns */}
+                            {columns.map((col, idx) => {
                                 const isSorted = sortKey === col.dataIndex;
                                 const sortIcon = isSorted
-                                    ? sortMode === "asc" ? <ChevronUp /> : <ChevronDown />
+                                    ? sortMode === "asc"
+                                        ? <ChevronUp />
+                                        : <ChevronDown />
                                     : <ChevronUp className="opacity-40" />;
 
                                 return (
@@ -348,10 +373,17 @@ const GenericDataTable = ({
                             })}
                         </tr>
                     </thead>
+
                     <tbody className={classes.tbody}>
                         {loading ? (
                             Array.from({ length: rowsPerPage }).map((_, i) => (
                                 <tr key={`loading-${i}`} className={classes.rowEven}>
+                                    {/* Serial column placeholder */}
+                                    {serial && (
+                                        <td className={`${classes.td} animate-pulse`}>
+                                            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto" />
+                                        </td>
+                                    )}
                                     {columns.map((_, j) => (
                                         <td key={j} className={`${classes.td} animate-pulse`}>
                                             <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto" />
@@ -363,12 +395,17 @@ const GenericDataTable = ({
                             data.map((row, i) => {
                                 const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
                                 const serialNumber = startIndex + i + 1;
+
                                 return (
                                     <tr key={startIndex + i} className={rowClass}>
+                                        {/* Serial column */}
+                                        {serial && (
+                                            <td className={classes.td}>{serialNumber}</td>
+                                        )}
+
+                                        {/* Dynamic columns */}
                                         {columns.map((col, j) => {
-                                            const value = col.serial
-                                                ? serialNumber
-                                                : row[col.title] ?? "-";
+                                            const value = row[col.title] ?? "-";
                                             return (
                                                 <td key={j} className={classes.td}>
                                                     {col.render ? col.render(value, row, startIndex + j) : value}
@@ -380,14 +417,18 @@ const GenericDataTable = ({
                             })
                         ) : (
                             <tr>
-                                <td colSpan={columns.length} className="text-center py-8 text-gray-500 font-medium">
-                                    No data available. {debouncedSearch && `(No results for "${debouncedSearch}")`}
+                                <td
+                                    colSpan={columns.length + (serial ? 1 : 0)}
+                                    className="text-center py-6 text-gray-400"
+                                >
+                                    No data found
                                 </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
             </div>
+
         </div>
     );
 };
