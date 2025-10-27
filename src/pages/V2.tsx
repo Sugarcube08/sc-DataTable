@@ -1,10 +1,12 @@
 import GenericDataTable from "../components/GenericDataTable"
 import Theme from "../components/Theme";
 import type { Api } from "../components/GenericDataTable";
+import { useResponseStruct } from "../context/ResponseStructContext";
+import { useEffect } from "react";
 
 const V2 = () => {
+  const { setResponseStruct } = useResponseStruct();
   const columns = [
-    { title: 'Serial', serial: true},
     { title: 'Title', dataIndex: 'title', sort: true },
     { title: 'Description', dataIndex: 'description', sort: true },
     { title: 'Price', dataIndex: 'price', sort: true },
@@ -15,20 +17,27 @@ const V2 = () => {
   const api: Api = {
     url: 'https://dummyjson.com/products',
     method: 'GET',
-    limit : "limit",
-    skip : "skip",
-    total : "total",
-    sortBy : "sortBy",
-    sortOrder : "order",
-    searchRoute: '/search',
-    searchPram: 'q'
   }
+
+  useEffect(() => {
+    setResponseStruct({
+      dataSrc: 'data',
+      limit: "limit",
+      skip: "skip",
+      total: "total",
+      sortBy: "sortBy",
+      sortOrder: "order",
+      searchRoute: '/search',
+      searchParam: 'q'
+    });
+  }, [setResponseStruct]);
 
   return (
     <Theme>
         <div className="overflow-x-auto mb-6">
           <GenericDataTable
             api={api}
+            serial={true}
             columns={columns}
             searchDebounce={1000}
           />
