@@ -2,24 +2,26 @@ import GenericDataTable from "../components/GenericDataTable"
 import Theme from "../components/Theme";
 import type { Api } from "../components/GenericDataTable";
 
-const V1 = () => {
+const V2 = () => {
   const columns = [
     { title: 'Serial', serial: true},
-    { title: 'User Name', dataIndex: 'username', sort: true },
-    { title: 'Name', dataIndex: 'name', sort: true },
-    { title: 'Email', dataIndex: 'email', sort: true },
-    { title: 'Age', dataIndex: 'age', sort: true },
+    { title: 'Title', dataIndex: 'title', sort: true },
+    { title: 'Description', dataIndex: 'description', sort: true },
+    { title: 'Price', dataIndex: 'price', sort: true },
+    { title: 'Brand', dataIndex: 'brand', sort: true },
+    { title: 'Category', dataIndex: 'category', sort: true },
   ];
   
   const api: Api = {
-    url: 'http://localhost:3000/api/datatable/v1',
+    url: 'https://dummyjson.com/products',
     method: 'GET',
-    limit : "pagination.limit",
-    skip : "pagination.skip",
-    total : "pagination.totalItems",
+    limit : "limit",
+    skip : "skip",
+    total : "total",
     sortBy : "sortBy",
-    sortOrder : "sortOrder",
-    searchPram: 'search'
+    sortOrder : "order",
+    searchRoute: '/search',
+    searchPram: 'q'
   }
 
   return (
@@ -28,10 +30,10 @@ const V1 = () => {
           <GenericDataTable
             api={api}
             columns={columns}
-            searchDebounce={1000} 
+            searchDebounce={1000}
           />
         </div>
-        <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
+        {/* <div className="overflow-x-auto mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
           <GenericDataTable
             api={api}
             columns={columns}
@@ -46,7 +48,6 @@ const V1 = () => {
             }}
           />
         </div>
-{/* 
         <div className="overflow-x-auto mb-6 bg-white p-4 rounded-lg shadow-lg">
           <GenericDataTable
             api={{ url: 'https://dummyjson.com/products', method: 'GET' }}
@@ -107,4 +108,4 @@ const V1 = () => {
   )
 }
 
-export default V1
+export default V2

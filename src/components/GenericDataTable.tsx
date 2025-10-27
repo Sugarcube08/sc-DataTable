@@ -34,19 +34,25 @@ export type ClassProps = {
     searchContainerClasses?: string;
 };
 
+
+
 export type Payload = {
-    skip: number;
-    limit: number
+    skip?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: SortMode;
 };
 
-export type Api = { 
-    url: string; method: "GET" | "POST"; 
-    limit?: string; 
-    skip?: string; 
-    total?: string; 
-    sortBy?: string; 
-    sortOrder?: string; 
-    search?: string 
+export type Api = {
+    url: string; method: "GET" | "POST";
+    limit?: string;
+    skip?: string;
+    total?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    searchRoute?: string;
+    searchPram?: string;
 };
 
 export type DataTableProps = {
@@ -159,21 +165,23 @@ const GenericDataTable = ({
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
     const [totalItems, setTotalItems] = useState(initialData?.[totalKey] || 0);
-    const [sortKey, setSortKey] = useState<string | null>(null);
-    const [sortMode, setSortMode] = useState<SortMode>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [sortKey, setSortKey] = useState<string | null>(payload?.sortBy || null);
+    const [sortMode, setSortMode] = useState<SortMode>(payload?.sortOrder || null);
+    const [searchTerm, setSearchTerm] = useState(payload?.search ?? '');
+    const [debouncedSearch, setDebouncedSearch] = useState(payload?.search ?? '');
     const [rowsPerPage, setRowsPerPage] = useState(payload?.limit ?? pagination ?? 10);
-
-    const totalPages = useMemo(() => Math.max(Math.ceil(totalItems / rowsPerPage), 1), [totalItems, rowsPerPage]);
-    const startIndex = useMemo(() => (page - 1) * rowsPerPage, [page, rowsPerPage]);
+    const totalPages = useMemo(() => {
+        const effectiveTotal = Math.max((totalItems ?? 0) - (payload?.skip ?? 0), 0);
+        return Math.max(Math.ceil(effectiveTotal / rowsPerPage), 1);
+    }, [totalItems, rowsPerPage, payload?.skip]);
+    const startIndex = useMemo(() => ((page - 1) * rowsPerPage), [page, rowsPerPage, payload?.skip]);
 
     //  FETCH DATA 
     const fetchData = useCallback(async () => {
         if (!api.url) return;
         setLoading(true);
         setError('');
-        const skipAmount = (page - 1) * rowsPerPage;
+        const skipAmount = ((page - 1) * rowsPerPage) + (payload?.skip ?? 0);
 
         try {
             const urlBase = api.url.replace(/\/$/, '');
@@ -187,12 +195,11 @@ const GenericDataTable = ({
             let options: RequestInit = { method: api.method };
 
             if (debouncedSearch.trim()) {
-                if (api.search && api.search.startsWith('/')) {
-                    url += `${api.search}`;
-                    params[api.search] = debouncedSearch;
-                } else {
-                    const q = api.search || 'q';
-                    params[q] = debouncedSearch;
+                if (api.searchRoute) {
+                    url += api.searchRoute;
+                }
+                if (api.searchPram) {
+                    params[api.searchPram] = debouncedSearch;
                 }
             }
 
@@ -213,7 +220,7 @@ const GenericDataTable = ({
                 };
             }
 
-            console.log(api.search)
+            console.log(url)
             const res = await fetch(url, options);
             if (!res.ok) throw new Error(`HTTP error ${res.status}`);
             const json = await res.json();
@@ -356,7 +363,6 @@ const GenericDataTable = ({
                             data.map((row, i) => {
                                 const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
                                 const serialNumber = startIndex + i + 1;
-
                                 return (
                                     <tr key={startIndex + i} className={rowClass}>
                                         {columns.map((col, j) => {
