@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
+//  TYPES 
 export type SortMode = "asc" | "desc" | "original" | null;
 
 export type SerialColumn = {
@@ -33,10 +34,23 @@ export type ClassProps = {
     searchContainerClasses?: string;
 };
 
-export type Payload = { skip: number; limit: number };
+export type Payload = {
+    skip: number;
+    limit: number
+};
+
+export type Api = { 
+    url: string; method: "GET" | "POST"; 
+    limit?: string; 
+    skip?: string; 
+    total?: string; 
+    sortBy?: string; 
+    sortOrder?: string; 
+    search?: string 
+};
 
 export type DataTableProps = {
-    api: { url: string; method: "GET" | "POST" };
+    api: Api;
     columns: Column[];
     payload?: Partial<Payload>;
     pagination?: number | null;
@@ -46,58 +60,42 @@ export type DataTableProps = {
     initialData?: any;
 };
 
-// Icons
-const ChevronUp = (props: React.SVGProps<SVGSVGElement>) => (
+//  ICONS 
+const ChevronUp = React.memo((props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
         viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path d="m18 15-6-6-6 6" />
     </svg>
-);
-const ChevronDown = (props: React.SVGProps<SVGSVGElement>) => (
+));
+
+const ChevronDown = React.memo((props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
         viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path d="m6 9 6 6 6-6" />
     </svg>
-);
-const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
+));
+
+const SearchIcon = React.memo((props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
         viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <circle cx="11" cy="11" r="8" />
         <path d="m21 21-4.3-4.3" />
     </svg>
-);
+));
 
-const getNestedValue = (obj: any, path?: string): any => {
-    if (!path) return undefined;
-    return path.split('.').reduce((acc, key) => acc?.[key], obj);
-};
+//  HELPERS 
+const getNestedValue = (obj: any, path?: string): any =>
+    path ? path.split('.').reduce((acc, key) => acc?.[key], obj) : undefined;
 
 const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
-    let dataSource: any[] = [];
+    if (!apiResponse) return [];
 
-    if (Array.isArray(apiResponse)) {
-        dataSource = apiResponse;
-    } else {
-        const colWithDataSrc = columns.find(c => 'dataSrc' in c && c.dataSrc !== undefined);
-        let dataSrc = colWithDataSrc?.dataSrc;
+    let dataSource: any[] = Array.isArray(apiResponse) ? apiResponse : [];
 
-        if (dataSrc === "") {
-            const arrayKeys = Object.keys(apiResponse).filter(k => Array.isArray(apiResponse[k]));
-            if (arrayKeys.length === 0) {
-                throw new Error(`No array found in API response for empty dataSrc.`);
-            } else if (arrayKeys.length > 1) {
-                throw new Error(`Multiple array keys found in API response: ${arrayKeys.join(", ")}. Please specify dataSrc.`);
-            }
-            dataSrc = arrayKeys[0];
-        }
-
-        if (dataSrc && Array.isArray(apiResponse[dataSrc])) {
-            dataSource = apiResponse[dataSrc];
-        } else if (Array.isArray(apiResponse.products)) {
-            dataSource = apiResponse.products;
-        } else {
-            dataSource = [apiResponse];
-        }
+    if (!dataSource.length && typeof apiResponse === "object") {
+        const possibleArrayKeys = Object.keys(apiResponse).filter(k => Array.isArray(apiResponse[k]));
+        const key = possibleArrayKeys.includes("data") ? "data" : possibleArrayKeys[0];
+        dataSource = apiResponse[key] || apiResponse.products || [apiResponse];
     }
 
     return dataSource.map(item =>
@@ -113,6 +111,32 @@ const parseApiResponse = (columns: Column[], apiResponse: any): any[] => {
 const getClassName = (defaults: string, replace?: string, extend?: string) =>
     replace || (extend ? `${defaults} ${extend}` : defaults);
 
+//  PAGINATION 
+const PaginationControls = React.memo(({ page, totalPages, onPageChange }: {
+    page: number;
+    totalPages: number;
+    onPageChange: (newPage: number) => void;
+}) => (
+    <div className="flex justify-center items-center gap-4 mt-4">
+        <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 1}
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-purple-600 transition">
+            Previous
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+            Page {page} of {totalPages}
+        </span>
+        <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-purple-600 transition">
+            Next
+        </button>
+    </div>
+));
+
+//  MAIN COMPONENT 
 const GenericDataTable = ({
     api,
     pagination,
@@ -123,21 +147,28 @@ const GenericDataTable = ({
     replaceClasses,
     initialData,
 }: DataTableProps) => {
+
+    const limitKey = api.limit || 'limit';
+    const skipKey = api.skip || 'skip';
+    const totalKey = api.total || 'total';
+
     const [data, setData] = useState<any[]>(() =>
         initialData ? parseApiResponse(columns, initialData) : []
     );
     const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
-    const [totalItems, setTotalItems] = useState(initialData?.total || 0);
+    const [totalItems, setTotalItems] = useState(initialData?.[totalKey] || 0);
     const [sortKey, setSortKey] = useState<string | null>(null);
     const [sortMode, setSortMode] = useState<SortMode>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(payload?.limit ?? pagination ?? 10);
-    const totalPages = Math.max(Math.ceil(totalItems / rowsPerPage), 1);
-    const startIndex = (page - 1) * rowsPerPage;
 
+    const totalPages = useMemo(() => Math.max(Math.ceil(totalItems / rowsPerPage), 1), [totalItems, rowsPerPage]);
+    const startIndex = useMemo(() => (page - 1) * rowsPerPage, [page, rowsPerPage]);
+
+    //  FETCH DATA 
     const fetchData = useCallback(async () => {
         if (!api.url) return;
         setLoading(true);
@@ -145,22 +176,34 @@ const GenericDataTable = ({
         const skipAmount = (page - 1) * rowsPerPage;
 
         try {
-            let url = api.url.replace(/\/$/, '');
-            const params: any = {
-                limit: rowsPerPage,
-                skip: skipAmount,
-                ...(sortKey && sortMode && sortMode !== 'original'
-                    ? { sortBy: sortKey, order: sortMode }
-                    : {}),
+            const urlBase = api.url.replace(/\/$/, '');
+            const params: Record<string, any> = {
+                [limitKey.split('.').at(-1) as string]: rowsPerPage,
+                [skipKey.split('.').at(-1) as string]: skipAmount,
+                ...(sortKey && sortMode ? { [api.sortBy as string]: sortKey, [api.sortOrder as string]: sortMode } : {}),
             };
+
+            let url = urlBase;
+            let options: RequestInit = { method: api.method };
+
             if (debouncedSearch.trim()) {
-                url += '/search';
-                params.q = debouncedSearch;
+                if (api.search && api.search.startsWith('/')) {
+                    url += `${api.search}`;
+                    params[api.search] = debouncedSearch;
+                } else {
+                    const q = api.search || 'q';
+                    params[q] = debouncedSearch;
+                }
             }
 
-            let options: RequestInit = { method: api.method };
             if (api.method === 'GET') {
-                const query = new URLSearchParams({ ...payload, ...params } as any).toString();
+                const query = new URLSearchParams(
+                    Object.entries({ ...payload, ...params })
+                        .reduce<Record<string, string>>((acc, [key, value]) => {
+                            if (value !== undefined && value !== null) acc[key] = String(value);
+                            return acc;
+                        }, {})
+                ).toString();
                 url += `?${query}`;
             } else {
                 options = {
@@ -170,79 +213,57 @@ const GenericDataTable = ({
                 };
             }
 
+            console.log(api.search)
             const res = await fetch(url, options);
             if (!res.ok) throw new Error(`HTTP error ${res.status}`);
             const json = await res.json();
 
+
             setData(parseApiResponse(columns, json));
-            setTotalItems(json.total || 0);
+            setTotalItems(getNestedValue(json, totalKey) || 0);
         } catch (err: any) {
             setError(err.message || 'Failed to fetch data');
         } finally {
             setLoading(false);
         }
-    }, [api, columns, page, rowsPerPage, sortKey, sortMode, debouncedSearch, payload]);
+    }, [api, columns, page, rowsPerPage, sortKey, sortMode, debouncedSearch, payload, limitKey, skipKey, totalKey]);
 
-    // Debounce search
+    //  EFFECTS 
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), typeof searchDebounce === "number" ? searchDebounce : 500);
         return () => clearTimeout(handler);
     }, [searchTerm, searchDebounce]);
 
-    useEffect(() => { setPage(1); }, [debouncedSearch, rowsPerPage]);
-    useEffect(() => { if (!initialData) fetchData(); }, [fetchData, initialData]);
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, rowsPerPage]);
 
-    const handleSortClick = (key: string) => {
-        let newMode: SortMode =
+    useEffect(() => {
+        if (!initialData) fetchData();
+    }, [fetchData, initialData]);
+
+    //  HANDLERS 
+    const handleSortClick = useCallback((key: string) => {
+        const newMode: SortMode =
             sortKey === key ? (sortMode === 'asc' ? 'desc' : sortMode === 'desc' ? 'original' : 'asc') : 'asc';
         setSortKey(newMode === 'original' ? null : key);
         setSortMode(newMode === 'original' ? null : newMode);
         setPage(1);
-    };
+    }, [sortKey, sortMode]);
 
+    //  CLASSES 
     const classes = useMemo(() => ({
-        thead: getClassName(
-            "bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400 text-white sticky top-0 z-10",
-            replaceClasses?.theadClasses, extendsClasses?.theadClasses),
-        th: getClassName(
-            "px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide",
-            replaceClasses?.thClasses, extendsClasses?.thClasses),
-        tbody: getClassName("divide-y divide-gray-100 bg-white",
-            replaceClasses?.tbodyClasses, extendsClasses?.tbodyClasses),
-        td: getClassName("px-4 py-2 text-sm text-gray-800",
-            replaceClasses?.tdClasses, extendsClasses?.tdClasses),
-        rowOdd: getClassName("bg-gray-50 hover:bg-gray-100 transition-colors",
-            replaceClasses?.rowOddClasses, extendsClasses?.rowOddClasses),
-        rowEven: getClassName("bg-white hover:bg-gray-100 transition-colors",
-            replaceClasses?.rowEvenClasses, extendsClasses?.rowEvenClasses),
-        searchInput: getClassName(
-            "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 shadow-sm",
-            replaceClasses?.searchInputClasses, extendsClasses?.searchInputClasses),
-        searchContainer: getClassName(
-            "w-full flex justify-center mb-6",
-            replaceClasses?.searchContainerClasses, extendsClasses?.searchContainerClasses),
+        thead: getClassName("bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400 text-white sticky top-0 z-10", replaceClasses?.theadClasses, extendsClasses?.theadClasses),
+        th: getClassName("px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide", replaceClasses?.thClasses, extendsClasses?.thClasses),
+        tbody: getClassName("divide-y divide-gray-100 bg-white", replaceClasses?.tbodyClasses, extendsClasses?.tbodyClasses),
+        td: getClassName("px-4 py-2 text-sm text-gray-800", replaceClasses?.tdClasses, extendsClasses?.tdClasses),
+        rowOdd: getClassName("bg-gray-50 hover:bg-gray-100 transition-colors", replaceClasses?.rowOddClasses, extendsClasses?.rowOddClasses),
+        rowEven: getClassName("bg-white hover:bg-gray-100 transition-colors", replaceClasses?.rowEvenClasses, extendsClasses?.rowEvenClasses),
+        searchInput: getClassName("w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 shadow-sm", replaceClasses?.searchInputClasses, extendsClasses?.searchInputClasses),
+        searchContainer: getClassName("w-full flex justify-center mb-6", replaceClasses?.searchContainerClasses, extendsClasses?.searchContainerClasses),
     }), [replaceClasses, extendsClasses]);
 
-    const PaginationControls = () => (
-        <div className="flex justify-center items-center gap-4 mt-4">
-            <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-purple-600 transition">
-                Previous
-            </button>
-            <span className="text-sm font-medium text-gray-700">
-                Page {page} of {totalPages}
-            </span>
-            <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-purple-600 transition">
-                Next
-            </button>
-        </div>
-    );
-
+    //  RENDER 
     if (error) return <div className="py-10 text-center text-red-600">{error}</div>;
 
     return (
@@ -269,14 +290,21 @@ const GenericDataTable = ({
                         onChange={e => setRowsPerPage(Number(e.target.value))}
                         className="w-full md:w-28 bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-2 text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                     >
-                        {[payload?.limit, 10, 25, 50, 100].map(rpp => (
+                        {[payload?.limit, 10, 25, 50, 100].filter(Boolean).map(rpp => (
                             <option key={rpp} value={rpp}>{rpp}</option>
                         ))}
                     </select>
 
-                    {rowsPerPage < totalItems && <PaginationControls />}
+                    {rowsPerPage < totalItems && (
+                        <PaginationControls
+                            page={page}
+                            totalPages={totalPages}
+                            onPageChange={newPage => setPage(Math.min(Math.max(1, newPage), totalPages))}
+                        />
+                    )}
                 </div>
             )}
+
             <div className="overflow-x-auto border border-gray-200 rounded-xl min-h-[400px]">
                 <table className="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead className={classes.thead}>
@@ -284,11 +312,10 @@ const GenericDataTable = ({
                             {columns.map((col, idx) => {
                                 if (col.serial) {
                                     return (
-                                        <th key={`serial-${idx}`} className={classes.th} style={{ width: '60px' }}>
-                                            <span>{col.title}</span>
-                                        </th>
+                                        <th key={idx} className={classes.th} style={{ width: '60px' }}>{col.title}</th>
                                     );
                                 }
+
                                 const isSorted = sortKey === col.dataIndex;
                                 const sortIcon = isSorted
                                     ? sortMode === "asc" ? <ChevronUp /> : <ChevronDown />
@@ -302,7 +329,9 @@ const GenericDataTable = ({
                                                 className="flex items-center justify-between w-full px-2 py-1 rounded-md hover:bg-black/10 transition"
                                             >
                                                 <span>{col.title}</span>
-                                                <span className={`ml-2 ${isSorted ? "text-white" : "text-gray-300"}`}>{sortIcon}</span>
+                                                <span className={`ml-2 ${isSorted ? "text-white" : "text-gray-300"}`}>
+                                                    {sortIcon}
+                                                </span>
                                             </button>
                                         ) : (
                                             <span>{col.title}</span>
@@ -314,41 +343,36 @@ const GenericDataTable = ({
                     </thead>
                     <tbody className={classes.tbody}>
                         {loading ? (
-                            Array.from({ length: payload?.limit || 5 }).map((_, i) => (
+                            Array.from({ length: rowsPerPage }).map((_, i) => (
                                 <tr key={`loading-${i}`} className={classes.rowEven}>
                                     {columns.map((_, j) => (
-                                        <td key={`loading-td-${j}`} className={`${classes.td} animate-pulse`}>
+                                        <td key={j} className={`${classes.td} animate-pulse`}>
                                             <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto" />
                                         </td>
                                     ))}
                                 </tr>
                             ))
-                        ) : data.length > 0 ? data.map((row, i) => {
-                            const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
-                            const serialNumber = startIndex + i + 1;
+                        ) : data.length > 0 ? (
+                            data.map((row, i) => {
+                                const rowClass = (startIndex + i) % 2 === 0 ? classes.rowEven : classes.rowOdd;
+                                const serialNumber = startIndex + i + 1;
 
-                            return (
-                                <tr key={startIndex + i} className={rowClass}>
-                                    {columns.map((col, j) => {
-                                        if (col.serial) {
-                                            const value = serialNumber;
+                                return (
+                                    <tr key={startIndex + i} className={rowClass}>
+                                        {columns.map((col, j) => {
+                                            const value = col.serial
+                                                ? serialNumber
+                                                : row[col.title] ?? "-";
                                             return (
-                                                <td key={`serial-${j}`} className={classes.td}>
-                                                    {col.render ? col.render(value, row, serialNumber - 1) : value}
+                                                <td key={j} className={classes.td}>
+                                                    {col.render ? col.render(value, row, startIndex + j) : value}
                                                 </td>
                                             );
-                                        }
-
-                                        const value = col.dataIndex ? row[col.title] ?? "-" : "-";
-                                        return (
-                                            <td key={j} className={classes.td}>
-                                                {col.render ? col.render(value, row, startIndex + j) : value}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            );
-                        }) : (
+                                        })}
+                                    </tr>
+                                );
+                            })
+                        ) : (
                             <tr>
                                 <td colSpan={columns.length} className="text-center py-8 text-gray-500 font-medium">
                                     No data available. {debouncedSearch && `(No results for "${debouncedSearch}")`}
@@ -356,11 +380,10 @@ const GenericDataTable = ({
                             </tr>
                         )}
                     </tbody>
-
                 </table>
             </div>
         </div>
     );
 };
 
-export default GenericDataTable;
+export default React.memo(GenericDataTable);
